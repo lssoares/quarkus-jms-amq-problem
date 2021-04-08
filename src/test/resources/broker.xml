@@ -13,6 +13,13 @@
 
         <security-enabled>false</security-enabled>
 
+        <address-settings>
+            <address-setting match="#">
+                <auto-create-addresses>true</auto-create-addresses>
+                <default-address-routing-type>ANYCAST</default-address-routing-type>
+            </address-setting>
+        </address-settings>
+
         <addresses>
             <address name="prices">
                 <anycast>

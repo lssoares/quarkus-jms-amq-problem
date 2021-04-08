@@ -22,7 +22,8 @@ import javax.jms.*;
 public class PureQpidTest {
 
     private static final Logger logger = LoggerFactory.getLogger(PureQpidTest.class);
-    private static final String QUEUE_NAME = "QPID";
+    private static final String QUEUE_NAME = "QPID_QUEUE";
+    private static final String TOPIC_NAME = "QPID_TOPIC";
 
     @ConfigProperty(name = "quarkus.qpid-jms.url")
     String jmsUrl;
@@ -50,6 +51,37 @@ public class PureQpidTest {
         try {
             produce();
             consume();
+            result = true;
+        } catch (Exception e) {
+            logger.error("Error: {}",e);
+        }
+        Assertions.assertTrue(result);
+
+    }
+
+    @Test
+    @Order(3)
+    public void firstConsumeThenProduceUsingTopic()  {
+        boolean result = false;
+        try {
+            consumeTopic();
+            produceTopic();
+            result = true;
+        } catch (Exception e) {
+            logger.error("Error: {}",e);
+        }
+        Assertions.assertTrue(result);
+
+    }
+
+
+    @Test
+    @Order(4)
+    public void firstProduceThenConsumeUsingTopic()  {
+        boolean result = false;
+        try {
+            produceTopic();
+            consumeTopic();
             result = true;
         } catch (Exception e) {
             logger.error("Error: {}",e);
@@ -99,4 +131,48 @@ public class PureQpidTest {
 
         connection.close();
     }
+
+
+
+    private void produceTopic() throws Exception {
+        final JmsConnectionFactory factory = new JmsConnectionFactory(jmsUrl);
+
+        Connection connection = factory.createConnection();
+        connection.start();
+
+        Session session = connection.createSession();
+        Topic destination = session.createTopic(TOPIC_NAME);
+
+
+        MessageProducer messageProducer = session.createProducer(destination);
+
+        TextMessage message = session.createTextMessage("Hello world from Qpid!");
+        messageProducer.send(message);
+
+        connection.close();
+
+    }
+
+    private void consumeTopic() throws Exception {
+        final JmsConnectionFactory factory = new JmsConnectionFactory("amqp://localhost:5672");
+
+        Connection connection = factory.createConnection();
+        connection.start();
+
+        Session session = connection.createSession();
+        Topic destination = session.createTopic(TOPIC_NAME);
+
+        MessageConsumer messageConsumer = session.createConsumer(destination);
+        TextMessage message = (TextMessage)messageConsumer.receiveNoWait();
+        if (message == null) {
+            logger.warn("No message found...That's OK: probably running consumer before producer");
+        } else {
+            logger.warn(message.getText());
+        }
+
+        connection.close();
+    }
+
+
+
 }
